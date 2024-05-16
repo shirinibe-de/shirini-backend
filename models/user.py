@@ -34,6 +34,9 @@ class User(models.Base):
 
     teams: Mapped[List[Team]] = relationship(secondary=TeamMembership)
 
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
 
 class Team(models.Base):
     __tablename__ = 'teams'
