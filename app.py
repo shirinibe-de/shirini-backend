@@ -21,8 +21,6 @@ app.config.from_file("app-config.local.toml", load=tomllib.load, text=False)
 
 CORS(app)
 
-print()
-
 app.config['SQLALCHEMY_DATABASE_URI'] = ('postgresql+psycopg2://{user}:{pw}@{host}:{port}/{db}'.
                                          format(user=app.config['DATABASE']['USERNAME'],
                                                 pw=app.config['DATABASE']['PASSWORD'],
@@ -141,6 +139,26 @@ def get_team_by_id(user, id):
     return jsonify({
         'id': team.id,
         'name': team.name,
+        'members': [
+            {
+                "name": user.full_name(),
+                "email": user.email,
+                "picture_url": user.picture_url,
+                "blames": 0,
+            },
+            {
+                "name": "Hamid Razi",
+                "email": "hamid.anv80@gmail.com",
+                "picture_url": user.picture_url,
+                "blames": 0,
+            },
+            {
+                "name": "Hamid Razi",
+                "email": user.email,
+                "picture_url": user.picture_url,
+                "blames": 2,
+            }
+        ],
         'created_at': team.created_at,
         'updated_at': team.updated_at,
     })
