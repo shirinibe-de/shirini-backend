@@ -1,10 +1,13 @@
-// cmd/main.go
+// --------------------------
+// File: cmd/main.go
+// --------------------------
 package main
 
 import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 
 	"github.com/shirinibe-de/shirini-backend/config"
 	"github.com/shirinibe-de/shirini-backend/internal/router"
@@ -27,6 +30,9 @@ func main() {
 
 	// Initialize Fiber app
 	app := fiber.New()
+
+	// Register logger middleware for access logs
+	app.Use(logger.New())
 
 	// Setup routes
 	router.SetupRoutes(app)
