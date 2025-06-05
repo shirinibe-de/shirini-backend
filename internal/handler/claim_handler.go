@@ -1,3 +1,4 @@
+// File: internal/handler/claim_handler.go
 package handler
 
 import (
@@ -8,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/shirinibe-de/shirini-backend/internal/domain"
 	"github.com/shirinibe-de/shirini-backend/internal/repository"
+	"github.com/shirinibe-de/shirini-backend/pkg/db"
 )
 
 func CreateClaim(c *fiber.Ctx) error {
@@ -34,8 +36,7 @@ func CreateClaim(c *fiber.Ctx) error {
 
 	claimRepo := repository.NewClaimRepository()
 	ctx := context.Background()
-	err := claimRepo.Create(ctx, claim)
-	if err != nil {
+	if err := claimRepo.Create(ctx, claim); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "DB error"})
 	}
 
@@ -63,12 +64,63 @@ func VoteOnClaim(c *fiber.Ctx) error {
 
 	voteRepo := repository.NewVoteRepository()
 	ctx := context.Background()
-	err := voteRepo.Create(ctx, vote)
-	if err != nil {
+	if err := voteRepo.Create(ctx, vote); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "DB error"})
 	}
 
-	// Optionally: check majority and update status (omitted for brevity)
-
 	return c.JSON(fiber.Map{"message": "Vote recorded"})
+}
+
+func ListClaims(c *fiber.Ctx) error {
+	userID := c.Locals("user_id").(string)
+	d := db.GetPool()
+	query := `
+    SELECT
+      ac.id,
+      ac.team_id,
+      ac.claimed_by,
+      cb.name AS claimed_by_name,
+      ac.claimed_for,
+      cf.name AS claimed_for_name,
+      ac.message
+    FROM achievement_claims ac
+    JOIN team_members tm ON ac.team_id = tm.team_id
+    JOIN users cb ON ac.claimed_by = cb.id
+    JOIN users cf ON ac.claimed_for = cf.id
+    WHERE tm.user_id = $1 AND ac.status = 'pending'
+    `
+	rows, err := d.Query(context.Background(), query, userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "DB error"})
+	}
+	defer rows.Close()
+
+	type ClaimView struct {
+		ID             string `json:"id"`
+		TeamID         string `json:"team_id"`
+		ClaimedBy      string `json:"claimed_by"`
+		ClaimedByName  string `json:"claimed_by_name"`
+		ClaimedFor     string `json:"claimed_for"`
+		ClaimedForName string `json:"claimed_for_name"`
+		Message        string `json:"message"`
+	}
+
+	var claims []ClaimView
+	for rows.Next() {
+		var cView ClaimView
+		if err := rows.Scan(
+			&cView.ID,
+			&cView.TeamID,
+			&cView.ClaimedBy,
+			&cView.ClaimedByName,
+			&cView.ClaimedFor,
+			&cView.ClaimedForName,
+			&cView.Message,
+		); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "DB scan error"})
+		}
+		claims = append(claims, cView)
+	}
+
+	return c.JSON(claims)
 }
