@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"shirini-backend/database"
 	"shirini-backend/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -12,10 +13,13 @@ import (
 func main() {
 	// Load .env
 	err := godotenv.Load()
+
 	if err != nil {
 		log.Println("Warning: .env file not found")
 	}
 
+	database.Connect()
+database.RunMigrations()
 	r := gin.Default()
 
 	r.GET("/auth/google", handlers.GoogleLogin)

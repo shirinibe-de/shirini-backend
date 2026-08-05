@@ -10,8 +10,7 @@ import (
 func GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
 
-	// ⚠️ فعلاً ساده (بدون Google API واقعی)
-	// بعداً می‌تونیم کاملش کنیم
+	
 
 	userID := "google-user-" + code
 
