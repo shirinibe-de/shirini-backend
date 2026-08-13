@@ -5,6 +5,7 @@ import (
 
 	"shirini-backend/database"
 	"shirini-backend/handlers"
+	"shirini-backend/middleware"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -19,12 +20,12 @@ func main() {
 	}
 
 	database.Connect()
-database.RunMigrations()
+	database.RunMigrations()
 	r := gin.Default()
 
 	r.GET("/auth/google", handlers.GoogleLogin)
 	r.GET("/auth/google/callback", handlers.GoogleCallback)
-	r.GET("/api/v1/me", handlers.Me)
+	r.GET("/api/v1/me", middleware.AuthMiddleware(), handlers.Me)
 
 	r.Run(":8080")
 }

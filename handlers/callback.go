@@ -10,8 +10,6 @@ import (
 func GoogleCallback(c *gin.Context) {
 	code := c.Query("code")
 
-	
-
 	userID := "google-user-" + code
 
 	token, _ := utils.GenerateToken(userID)
