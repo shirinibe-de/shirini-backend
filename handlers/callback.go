@@ -7,14 +7,22 @@ import (
 	"shirini-backend/utils"
 )
 
-func GoogleCallback(c *gin.Context) {
-	code := c.Query("code")
+func GoogleCallback(secret string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		code := c.Query("code")
 
-	userID := "google-user-" + code
+		userID := "google-user-" + code
 
-	token, _ := utils.GenerateToken(userID)
+		token, err := utils.GenerateToken(userID, secret)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to generate token",
+			})
+			return
+		}
 
-	redirectURL := "http://localhost:3000/auth/callback?token=" + token
+		redirectURL := "http://localhost:3000/auth/callback?token=" + token
 
-	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+	}
 }

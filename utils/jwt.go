@@ -2,17 +2,14 @@ package utils
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateToken(userID string) (string, error) {
-	secret := os.Getenv("JWT_SECRET")
-
+func GenerateToken(userID string, secret string) (string, error) {
 	if secret == "" {
-		return "", fmt.Errorf("JWT_SECRET is not set")
+		return "", fmt.Errorf("JWT secret is not set")
 	}
 
 	claims := jwt.MapClaims{
@@ -25,16 +22,17 @@ func GenerateToken(userID string) (string, error) {
 	return token.SignedString([]byte(secret))
 }
 
-func ValidateToken(tokenStr string) (jwt.MapClaims, error) {
-	secret := os.Getenv("JWT_SECRET")
-
+func ValidateToken(tokenStr string, secret string) (jwt.MapClaims, error) {
 	if secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is not set")
+		return nil, fmt.Errorf("JWT secret is not set")
 	}
 
 	token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 		if token.Method != jwt.SigningMethodHS256 {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+			return nil, fmt.Errorf(
+				"unexpected signing method: %v",
+				token.Header["alg"],
+			)
 		}
 
 		return []byte(secret), nil
