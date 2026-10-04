@@ -8,53 +8,87 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
-	Google   GoogleConfig
+	Server   ServerConfig   `koanf:"server"`
+	Database DatabaseConfig `koanf:"database"`
+	JWT      JWTConfig      `koanf:"jwt"`
+	Google   GoogleConfig   `koanf:"google"`
 }
 
 type ServerConfig struct {
-	Port string
+	Port string `koanf:"port"`
 }
 
 type DatabaseConfig struct {
-	URL string
+	URL string `koanf:"url"`
 }
 
 type JWTConfig struct {
-	Secret string
+	Secret string `koanf:"secret"`
 }
 
 type GoogleConfig struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURI  string
+	ClientID            string `koanf:"client_id"`
+	ClientSecret        string `koanf:"client_secret"`
+	RedirectURI         string `koanf:"redirect_uri"`
+	FrontendCallbackURL string `koanf:"frontend_callback_url"`
 }
 
 func Load() (*Config, error) {
 	k := koanf.New(".")
 
-	err := k.Load(env.Provider("", env.Opt{}), nil)
+	err := k.Load(
+		env.Provider("", env.Opt{
+			Prefix: "",
+		}),
+		nil,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := &Config{
-		Server: ServerConfig{
-			Port: k.String("SERVER_PORT"),
-		},
-		Database: DatabaseConfig{
-			URL: k.String("DATABASE_URL"),
-		},
-		JWT: JWTConfig{
-			Secret: k.String("JWT_SECRET"),
-		},
-		Google: GoogleConfig{
-			ClientID:     k.String("GOOGLE_CLIENT_ID"),
-			ClientSecret: k.String("GOOGLE_CLIENT_SECRET"),
-			RedirectURI:  k.String("GOOGLE_REDIRECT_URI"),
-		},
+	// تبدیل env های flat به ساختار config
+	err = k.Set("server.port", k.String("SERVER_PORT"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("database.url", k.String("DATABASE_URL"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("jwt.secret", k.String("JWT_SECRET"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("google.client_id", k.String("GOOGLE_CLIENT_ID"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("google.client_secret", k.String("GOOGLE_CLIENT_SECRET"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("google.redirect_uri", k.String("GOOGLE_REDIRECT_URI"))
+	if err != nil {
+		return nil, err
+	}
+
+	err = k.Set("google.frontend_callback_url", k.String("FRONTEND_CALLBACK_URL"))
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := &Config{}
+
+	err = k.Unmarshal("", cfg)
+
+	if err != nil {
+		return nil, err
 	}
 
 	if cfg.Server.Port == "" {

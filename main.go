@@ -13,6 +13,7 @@ import (
 )
 
 func main() {
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: .env file not found")
@@ -24,30 +25,31 @@ func main() {
 	}
 
 	database.Connect(cfg.Database.URL)
+
 	database.RunMigrations()
 
 	r := gin.Default()
 
-r.GET(
-	"/auth/google",
-	handlers.GoogleLogin(
-		cfg.Google.ClientID,
-		cfg.Google.RedirectURI,
-	),
-)
+	r.GET(
+		"/auth/google",
+		handlers.GoogleLogin(cfg),
+	)
+
 	r.GET(
 		"/auth/google/callback",
-		handlers.GoogleCallback(cfg.JWT.Secret),
+		handlers.GoogleCallback(cfg),
 	)
+
 	r.GET(
 		"/api/v1/me",
-		middleware.AuthMiddleware(cfg.JWT.Secret),
+		middleware.AuthMiddleware(cfg),
 		handlers.Me,
 	)
 
 	log.Println("Server running on port", cfg.Server.Port)
 
 	err = r.Run(":" + cfg.Server.Port)
+
 	if err != nil {
 		log.Fatal(err)
 	}

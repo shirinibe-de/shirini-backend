@@ -5,10 +5,15 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
+
+	"shirini-backend/config"
 )
 
-func GoogleLogin(clientID string, redirectURI string) gin.HandlerFunc {
+func GoogleLogin(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		clientID := cfg.Google.ClientID
+		redirectURI := cfg.Google.RedirectURI
 
 		if clientID == "" || redirectURI == "" {
 			c.JSON(http.StatusInternalServerError, gin.H{

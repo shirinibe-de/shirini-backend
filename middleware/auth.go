@@ -5,10 +5,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+
+	"shirini-backend/config"
 	"shirini-backend/utils"
 )
 
-func AuthMiddleware(secret string) gin.HandlerFunc {
+func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 		authHeader := c.GetHeader("Authorization")
@@ -31,7 +33,10 @@ func AuthMiddleware(secret string) gin.HandlerFunc {
 			return
 		}
 
-		claims, err := utils.ValidateToken(tokenString, secret)
+		claims, err := utils.ValidateToken(
+			tokenString,
+			cfg.JWT.Secret,
+		)
 
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
