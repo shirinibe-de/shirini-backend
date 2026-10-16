@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/knadh/koanf/v2"
 	"github.com/knadh/koanf/providers/env/v2"
@@ -12,6 +13,11 @@ type Config struct {
 	Database DatabaseConfig `koanf:"database"`
 	JWT      JWTConfig      `koanf:"jwt"`
 	Google   GoogleConfig   `koanf:"google"`
+	CORS     CORSConfig     `koanf:"cors"`
+}
+
+type CORSConfig struct {
+	Origins []string `koanf:"origins"`
 }
 
 type ServerConfig struct {
@@ -83,12 +89,22 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 
+
 	cfg := &Config{}
 
 	err = k.Unmarshal("", cfg)
 
 	if err != nil {
 		return nil, err
+	}
+
+	corsRaw := k.String("CORS_ORIGINS")
+	if corsRaw != "" {
+		for _, o := range strings.Split(corsRaw, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				cfg.CORS.Origins = append(cfg.CORS.Origins, o)
+			}
+		}
 	}
 
 	if cfg.Server.Port == "" {

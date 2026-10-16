@@ -24,6 +24,27 @@ func GoogleCallback(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// Verify the OAuth state: signature must be valid and the
+		// nonce must match the browser cookie set at login start.
+		stateParam := c.Query("state")
+
+		state, err := verifyState(stateParam, cfg.JWT.Secret)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid oauth state",
+			})
+			return
+		}
+
+		cookieNonce, err := c.Cookie(stateCookieName)
+		if err != nil || cookieNonce == "" || cookieNonce != state.Nonce {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "invalid oauth state",
+			})
+			return
+		}
+
+		clearStateCookie(c)
 
 		googleUser, err := services.ExchangeCode(code, cfg)
 
@@ -34,7 +55,6 @@ func GoogleCallback(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-
 		user, err := database.FindUserByGoogleID(googleUser.ID)
 
 		if err != nil {
@@ -43,7 +63,6 @@ func GoogleCallback(cfg *config.Config) gin.HandlerFunc {
 			})
 			return
 		}
-
 
 		if user == nil {
 
@@ -62,7 +81,6 @@ func GoogleCallback(cfg *config.Config) gin.HandlerFunc {
 			}
 		}
 
-
 		token, err := utils.GenerateToken(
 			strconv.Itoa(user.ID),
 			cfg.JWT.Secret,
@@ -75,10 +93,7 @@ func GoogleCallback(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-
-		redirectURL := cfg.Google.FrontendCallbackURL +
-			"?token=" + token
-
+		redirectURL := state.RedirectURI + "?token=" + token
 
 		c.Redirect(
 			http.StatusTemporaryRedirect,

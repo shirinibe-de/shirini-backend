@@ -67,6 +67,10 @@ func ExchangeCode(code string, cfg *config.Config) (*GoogleUser, error) {
 
 	defer userResp.Body.Close()
 
+	if userResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("google userinfo request failed: %s", userResp.Status)
+	}
+
 
 	var user GoogleUser
 
