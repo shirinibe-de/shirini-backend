@@ -3,28 +3,54 @@ package main
 import (
 	"log"
 
-	"shirini-backend/database"
-	"shirini-backend/handlers"
-
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	"shirini-backend/config"
+	"shirini-backend/database"
+	"shirini-backend/handlers"
+	"shirini-backend/middleware"
 )
 
 func main() {
-	// Load .env
-	err := godotenv.Load()
 
+	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: .env file not found")
 	}
 
-	database.Connect()
-database.RunMigrations()
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal("Config error:", err)
+	}
+
+	database.Connect(cfg.Database.URL)
+
+	database.RunMigrations()
+
 	r := gin.Default()
 
-	r.GET("/auth/google", handlers.GoogleLogin)
-	r.GET("/auth/google/callback", handlers.GoogleCallback)
-	r.GET("/api/v1/me", handlers.Me)
+	r.GET(
+		"/auth/google",
+		handlers.GoogleLogin(cfg),
+	)
 
-	r.Run(":8080")
+	r.GET(
+		"/auth/google/callback",
+		handlers.GoogleCallback(cfg),
+	)
+
+	r.GET(
+		"/api/v1/me",
+		middleware.AuthMiddleware(cfg),
+		handlers.Me,
+	)
+
+	log.Println("Server running on port", cfg.Server.Port)
+
+	err = r.Run(":" + cfg.Server.Port)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
