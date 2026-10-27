@@ -51,18 +51,29 @@ func main() {
 
 	// Domain endpoints: mock implementations mirroring the frontend
 	// seed data until the real logic is built.
+
+	// Authenticated domain endpoints.
 	auth := api.Group("/", middleware.AuthMiddleware(cfg))
 
+	// Team endpoints require both authentication and team membership.
+	teams := auth.Group("/teams/:team_id")
+	teams.Use(middleware.RequireTeamMembership())
+
+	// Team collection endpoints do not require membership in a specific team.
 	auth.GET("/teams", handlers.MockGetTeams)
 	auth.POST("/teams", handlers.MockCreateTeam)
-	auth.GET("/teams/:team_id", handlers.MockGetTeamDetails)
-	auth.GET("/teams/:team_id/members", handlers.MockGetTeamMembers)
-	auth.GET("/teams/:team_id/achievement-types", handlers.MockGetAchievementTypes)
-	auth.POST("/teams/:team_id/achievement-types", handlers.MockCreateAchievementType)
-	auth.GET("/teams/:team_id/claims", handlers.MockGetClaims)
-	auth.POST("/teams/:team_id/claims", handlers.MockCreateClaim)
-	auth.GET("/teams/:team_id/debts", handlers.MockGetDebts)
-	auth.POST("/teams/:team_id/settlements", handlers.MockCreateSettlement)
+
+	// Team-specific endpoints.
+	teams.GET("", handlers.MockGetTeamDetails)
+	teams.GET("/members", handlers.MockGetTeamMembers)
+	teams.GET("/achievement-types", handlers.MockGetAchievementTypes)
+	teams.POST("/achievement-types", handlers.MockCreateAchievementType)
+	teams.GET("/claims", handlers.MockGetClaims)
+	teams.POST("/claims", handlers.MockCreateClaim)
+	teams.GET("/debts", handlers.MockGetDebts)
+	teams.POST("/settlements", handlers.MockCreateSettlement)
+
+	// Other authenticated endpoints.
 	auth.POST("/claims/:claim_id/votes", handlers.MockCastVote)
 	auth.POST("/invites/:token/accept", handlers.MockAcceptInvite)
 

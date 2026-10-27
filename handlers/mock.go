@@ -9,8 +9,11 @@ import (
 	"math/rand/v2"
 	"net/http"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
+
+	"shirini-backend/database"
 
 	"github.com/gin-gonic/gin"
 )
@@ -299,6 +302,7 @@ type mockCreateTeamBody struct {
 }
 
 // POST /teams
+
 func MockCreateTeam(c *gin.Context) {
 	var body mockCreateTeamBody
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -306,22 +310,54 @@ func MockCreateTeam(c *gin.Context) {
 		return
 	}
 
-	store.mu.Lock()
-	defer store.mu.Unlock()
+	rawUserID, exists := c.Get("user_id")
+	if !exists {
+		mockError(c, http.StatusUnauthorized, "invalid user")
+		return
+	}
 
-	teamID := mockID("team")
+	userIDString, ok := rawUserID.(string)
+	if !ok || userIDString == "" {
+		mockError(c, http.StatusUnauthorized, "invalid user")
+		return
+	}
+
+	userID, err := strconv.Atoi(userIDString)
+	if err != nil || userID <= 0 {
+		mockError(c, http.StatusUnauthorized, "invalid user")
+		return
+	}
+
 	inviteToken := mockID("invite")
+
+	dbTeam, err := database.CreateTeam(
+		body.Name,
+		body.Currency,
+		inviteToken,
+		userID,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to create team",
+		})
+		return
+	}
+
 	team := mockTeam{
-		ID:          teamID,
-		Name:        body.Name,
+		ID:          dbTeam.ID,
+		Name:        dbTeam.Name,
 		Currency:    body.Currency,
 		InviteToken: inviteToken,
 		CreatedAt:   time.Now().UTC().Format(time.RFC3339),
 	}
-	store.teams[teamID] = team
-	store.teamMembers[teamID] = []string{mockCurrentUserID}
-	store.achievementTypes[teamID] = []mockAchievementType{}
-	store.settlements[teamID] = map[string]string{}
+
+	// Temporary compatibility with the remaining mock handlers.
+	store.mu.Lock()
+	store.teams[team.ID] = team
+	store.teamMembers[team.ID] = []string{mockCurrentUserID}
+	store.achievementTypes[team.ID] = []mockAchievementType{}
+	store.settlements[team.ID] = map[string]string{}
+	store.mu.Unlock()
 
 	c.JSON(http.StatusOK, team)
 }
