@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("Warning: .env file not found")
@@ -25,11 +24,9 @@ func main() {
 	}
 
 	database.Connect(cfg.Database.URL)
-
 	database.RunMigrations()
 
 	r := gin.Default()
-
 	r.Use(middleware.CORSMiddleware(cfg))
 
 	api := r.Group("/api/v1")
@@ -43,20 +40,23 @@ func main() {
 		"/auth/google/callback",
 		handlers.GoogleCallback(cfg),
 	)
+
 	api.GET(
 		"/auth/me",
 		middleware.AuthMiddleware(cfg),
 		handlers.Me(cfg),
 	)
 
-	// Domain endpoints: mock implementations mirroring the frontend
-	// seed data until the real logic is built.
+	// Authenticated domain endpoints.
 	auth := api.Group("/", middleware.AuthMiddleware(cfg))
 
-	auth.GET("/teams", handlers.MockGetTeams)
-	auth.POST("/teams", handlers.MockCreateTeam)
-	auth.GET("/teams/:team_id", handlers.MockGetTeamDetails)
-	auth.GET("/teams/:team_id/members", handlers.MockGetTeamMembers)
+	// Team CRUD: database-backed implementations.
+	auth.GET("/teams", handlers.GetTeams)
+	auth.POST("/teams", handlers.CreateTeam)
+	auth.GET("/teams/:team_id", handlers.GetTeamDetails)
+
+	// Other domain endpoints remain mock implementations.
+	auth.GET("/teams/:team_id/members", handlers.GetTeamMembers)
 	auth.GET("/teams/:team_id/achievement-types", handlers.MockGetAchievementTypes)
 	auth.POST("/teams/:team_id/achievement-types", handlers.MockCreateAchievementType)
 	auth.GET("/teams/:team_id/claims", handlers.MockGetClaims)
@@ -66,13 +66,12 @@ func main() {
 	auth.POST("/claims/:claim_id/votes", handlers.MockCastVote)
 	auth.POST("/invites/:token/accept", handlers.MockAcceptInvite)
 
-	// Unauthenticated per api.md: invite resolution happens pre-login.
+	// Invite resolution is available before login.
 	api.GET("/invites/:token", handlers.MockResolveInvite)
 
 	log.Println("Server running on port", cfg.Server.Port)
 
-	err = r.Run(":" + cfg.Server.Port)
-	if err != nil {
+	if err := r.Run(":" + cfg.Server.Port); err != nil {
 		log.Fatal(err)
 	}
 }
